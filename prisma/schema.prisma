@@ -1,0 +1,196 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id              String             @id @default(cuid())
+  name            String?
+  email           String?            @unique
+  emailVerified   DateTime?
+  image           String?
+  password        String?
+  role            Role               @default(USER)
+  accounts        Account[]
+  sessions        Session[]
+  subscriptions   UserSubscription[]
+  supportTickets  SupportTicket[]
+  invoices        Invoice[]
+  portfolioItems  PortfolioProject[] @relation("ProjectAuthor")
+  galleryAssets   GalleryAsset[]     @relation("GalleryUploader")
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model PortfolioProject {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  category    String
+  summary     String
+  description String?
+  tags        String
+  coverImage  String?
+  featured    Boolean  @default(false)
+  published   Boolean  @default(true)
+  authorId    String?
+  author      User?    @relation("ProjectAuthor", fields: [authorId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ServicePlan {
+  id           String             @id @default(cuid())
+  name         String             @unique
+  slug         String             @unique
+  description  String
+  monthlyPrice String
+  yearlyPrice  String
+  features     String
+  active       Boolean            @default(true)
+  subscriptions UserSubscription[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+}
+
+model UserSubscription {
+  id           String             @id @default(cuid())
+  userId       String
+  planId       String
+  billingCycle BillingCycle       @default(MONTHLY)
+  status       SubscriptionStatus @default(ACTIVE)
+  startsAt     DateTime           @default(now())
+  endsAt       DateTime?
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan         ServicePlan        @relation(fields: [planId], references: [id])
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAUSED
+  CANCELLED
+}
+
+model GalleryAsset {
+  id          String   @id @default(cuid())
+  title       String
+  category    String
+  imageUrl    String
+  altText     String?
+  uploadedById String?
+  uploadedBy  User?    @relation("GalleryUploader", fields: [uploadedById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SupportTicket {
+  id          String       @id @default(cuid())
+  subject     String
+  category    String
+  description String
+  status      TicketStatus @default(OPEN)
+  priority    TicketPriority @default(MEDIUM)
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model Inquiry {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  company   String?
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model Invoice {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  amount    Float
+  status    String
+  fileUrl   String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  name      String
+  key       String   @unique
+  service   String
+  createdAt DateTime @default(now())
+}
